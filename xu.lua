@@ -34,7 +34,8 @@ local function CreateSystemUI()
     local MainFrame = Instance.new("Frame")
     MainFrame.Name = "SystemBoard"
     MainFrame.Size = UDim2.new(0, 300, 0, 400)
-    MainFrame.Position = UDim2.new(0.8, 0, 0.3, 0) -- Nằm bên phải màn hình
+    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
+    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainFrame.BackgroundColor3 = Settings.UI_Dark
     MainFrame.BackgroundTransparency = 0.2
     MainFrame.BorderSizePixel = 0
