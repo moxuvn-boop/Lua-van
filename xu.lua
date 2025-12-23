@@ -1,330 +1,265 @@
---[[ 
-    SOUL LAND SYSTEM V7 - STATUS HUD EDITION
-    Author: Gemini
-    Style: RPG System Status (Hệ thống trạng thái)
-]]
+--[[ Super Ring Parts V4 - Phiên bản cải tiến đẹp kiểu RGB by Grok trợ giúp ]]
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
+local SoundService = game:GetService("SoundService")
+local StarterGui = game:GetService("StarterGui")
+local TextChatService = game:GetService("TextChatService")
 local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
+
 local LocalPlayer = Players.LocalPlayer
+local Workspace = game:GetService("Workspace")
 
--- // SETTINGS (CẤU HÌNH) \\ --
-local Settings = {
-    Enabled = false,
-    Radius = 25,             -- Bán kính cơ bản
-    RingSpacing = 12,        -- Khoảng cách giữa các vòng
-    RotationSpeed = 2,       -- Tốc độ xoay
-    TotalRings = 9,          -- 9 Hồn hoàn
-    Attraction = 60,         -- Lực hút
-    UI_Color = Color3.fromRGB(0, 255, 255), -- Màu chủ đạo (Cyan Neon)
-    UI_Dark = Color3.fromRGB(10, 15, 20)    -- Màu nền tối
+-- Sound
+local function playSound(id)
+    local s = Instance.new("Sound")
+    s.SoundId = "rbxassetid://" .. id
+    s.Parent = SoundService
+    s:Play()
+    s.Ended:Connect(function() s:Destroy() end)
+end
+playSound("2865227271")
+
+-- GUI Setup
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "SuperRingPartsRGB"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 300, 0, 380)
+MainFrame.Position = UDim2.new(0.5, -150, 0.5, -190)
+MainFrame.BackgroundTransparency = 0.3
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 30)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
+
+local UICorner = Instance.new("UICorner")
+UICorner.CornerRadius = UDim.new(0, 20)
+UICorner.Parent = MainFrame
+
+local UIGradient = Instance.new("UIGradient")
+UIGradient.Color = ColorSequence.new{
+    ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 150)),
+    ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+    ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 100, 255))
 }
+UIGradient.Rotation = 45
+UIGradient.Parent = MainFrame
 
--- // UI LIBRARY: SYSTEM STYLE \\ --
-local function CreateSystemUI()
-    local ScreenGui = Instance.new("ScreenGui")
-    ScreenGui.Name = "SoulLandSystemHUD"
-    ScreenGui.ResetOnSpawn = false
-    ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-    -- MAIN BOARD (BẢNG TRẠNG THÁI)
-    local MainFrame = Instance.new("Frame")
-    MainFrame.Name = "SystemBoard"
-    MainFrame.Size = UDim2.new(0, 300, 0, 400)
-    MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-    MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
-    MainFrame.BackgroundColor3 = Settings.UI_Dark
-    MainFrame.BackgroundTransparency = 0.2
-    MainFrame.BorderSizePixel = 0
-    MainFrame.Parent = ScreenGui
-
-    -- VIỀN NEON
-    local UIStroke = Instance.new("UIStroke")
-    UIStroke.Color = Settings.UI_Color
-    UIStroke.Thickness = 1.5
-    UIStroke.Transparency = 0.5
-    UIStroke.Parent = MainFrame
-
-    local UICorner = Instance.new("UICorner")
-    UICorner.CornerRadius = UDim.new(0, 6)
-    UICorner.Parent = MainFrame
-
-    -- DECORATION LINES (TRANG TRÍ)
-    local TopLine = Instance.new("Frame")
-    TopLine.Size = UDim2.new(1, 0, 0, 2)
-    TopLine.BackgroundColor3 = Settings.UI_Color
-    TopLine.BorderSizePixel = 0
-    TopLine.Parent = MainFrame
-
-    local Header = Instance.new("TextLabel")
-    Header.Size = UDim2.new(1, -20, 0, 40)
-    Header.Position = UDim2.new(0, 10, 0, 5)
-    Header.BackgroundTransparency = 1
-    Header.Text = "HỆ THỐNG HỒN HOÀN"
-    Header.TextColor3 = Settings.UI_Color
-    Header.Font = Enum.Font.Michroma -- Font kiểu máy móc/viễn tưởng
-    Header.TextSize = 18
-    Header.TextXAlignment = Enum.TextXAlignment.Left
-    Header.Parent = MainFrame
-
-    -- MINIMIZE BUTTON (NÚT THU NHỎ)
-    local MinBtn = Instance.new("TextButton")
-    MinBtn.Size = UDim2.new(0, 30, 0, 30)
-    MinBtn.Position = UDim2.new(1, -35, 0, 5)
-    MinBtn.BackgroundTransparency = 1
-    MinBtn.Text = "[-]"
-    MinBtn.TextColor3 = Settings.UI_Color
-    MinBtn.Font = Enum.Font.Code
-    MinBtn.TextSize = 18
-    MinBtn.Parent = MainFrame
-
-    -- CONTENT CONTAINER
-    local Container = Instance.new("Frame")
-    Container.Name = "Content"
-    Container.Size = UDim2.new(1, -20, 1, -50)
-    Container.Position = UDim2.new(0, 10, 0, 50)
-    Container.BackgroundTransparency = 1
-    Container.Parent = MainFrame
-
-    local ListLayout = Instance.new("UIListLayout")
-    ListLayout.Padding = UDim.new(0, 10)
-    ListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-    ListLayout.Parent = Container
-
-    -- -- COMPONENTS -- --
-
-    -- 1. STATUS DISPLAY (HIỂN THỊ THÔNG SỐ)
-    local StatusFrame = Instance.new("Frame")
-    StatusFrame.Size = UDim2.new(1, 0, 0, 60)
-    StatusFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    StatusFrame.BackgroundTransparency = 0.5
-    StatusFrame.Parent = Container
-    Instance.new("UICorner", StatusFrame).CornerRadius = UDim.new(0, 4)
-    
-    local StatusText = Instance.new("TextLabel")
-    StatusText.Size = UDim2.new(1, -10, 1, 0)
-    StatusText.Position = UDim2.new(0, 10, 0, 0)
-    StatusText.BackgroundTransparency = 1
-    StatusText.Text = "TRẠNG THÁI: CHỜ\nSỐ KHỐI: 0"
-    StatusText.TextColor3 = Color3.fromRGB(200, 200, 200)
-    StatusText.Font = Enum.Font.Code
-    StatusText.TextSize = 14
-    StatusText.TextXAlignment = Enum.TextXAlignment.Left
-    StatusText.Parent = StatusFrame
-
-    -- 2. MAIN TOGGLE (NÚT KÍCH HOẠT)
-    local ToggleBtn = Instance.new("TextButton")
-    ToggleBtn.Size = UDim2.new(1, 0, 0, 40)
-    ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-    ToggleBtn.Text = "KÍCH HOẠT HỆ THỐNG"
-    ToggleBtn.TextColor3 = Settings.UI_Color
-    ToggleBtn.Font = Enum.Font.Michroma
-    ToggleBtn.TextSize = 14
-    ToggleBtn.Parent = Container
-    Instance.new("UICorner", ToggleBtn).CornerRadius = UDim.new(0, 4)
-    local ToggleStroke = Instance.new("UIStroke")
-    ToggleStroke.Color = Settings.UI_Color
-    ToggleStroke.Thickness = 1
-    ToggleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-    ToggleStroke.Parent = ToggleBtn
-
-    ToggleBtn.MouseButton1Click:Connect(function()
-        Settings.Enabled = not Settings.Enabled
-        if Settings.Enabled then
-            ToggleBtn.Text = ">> HỆ THỐNG ĐANG CHẠY <<"
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(0, 100, 100)
-            ToggleBtn.TextColor3 = Color3.new(1,1,1)
-        else
-            ToggleBtn.Text = "KÍCH HOẠT HỆ THỐNG"
-            ToggleBtn.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
-            ToggleBtn.TextColor3 = Settings.UI_Color
+-- RGB Animation
+spawn(function()
+    while true do
+        for i = 0, 360, 2 do
+            UIGradient.Offset = Vector2.new(math.sin(math.rad(i)) * 0.5, math.cos(math.rad(i)) * 0.5)
+            task.wait(0.03)
         end
-    end)
-
-    -- 3. SLIDERS FUNCTION (HÀM TẠO THANH KÉO)
-    local function CreateSlider(name, default, min, max, callback)
-        local Frame = Instance.new("Frame")
-        Frame.Size = UDim2.new(1, 0, 0, 45)
-        Frame.BackgroundTransparency = 1
-        Frame.Parent = Container
-
-        local Label = Instance.new("TextLabel")
-        Label.Size = UDim2.new(1, 0, 0, 20)
-        Label.BackgroundTransparency = 1
-        Label.Text = name .. ": " .. default
-        Label.TextColor3 = Color3.fromRGB(180, 180, 180)
-        Label.Font = Enum.Font.Gotham
-        Label.TextSize = 12
-        Label.TextXAlignment = Enum.TextXAlignment.Left
-        Label.Parent = Frame
-
-        local SlideBar = Instance.new("TextButton") -- Dùng button để click
-        SlideBar.Size = UDim2.new(1, 0, 0, 6)
-        SlideBar.Position = UDim2.new(0, 0, 0, 25)
-        SlideBar.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-        SlideBar.Text = ""
-        SlideBar.AutoButtonColor = false
-        SlideBar.Parent = Frame
-        Instance.new("UICorner", SlideBar).CornerRadius = UDim.new(1, 0)
-
-        local Fill = Instance.new("Frame")
-        Fill.Size = UDim2.new((default - min)/(max - min), 0, 1, 0)
-        Fill.BackgroundColor3 = Settings.UI_Color
-        Fill.BorderSizePixel = 0
-        Fill.Parent = SlideBar
-        Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
-
-        -- Logic kéo thả
-        local draggingSlider = false
-        SlideBar.MouseButton1Down:Connect(function() draggingSlider = true end)
-        UserInputService.InputEnded:Connect(function(input) 
-            if input.UserInputType == Enum.UserInputType.MouseButton1 then draggingSlider = false end 
-        end)
-        
-        UserInputService.InputChanged:Connect(function(input)
-            if draggingSlider and input.UserInputType == Enum.UserInputType.MouseMovement then
-                local mousePos = UserInputService:GetMouseLocation().X
-                local barPos = SlideBar.AbsolutePosition.X
-                local barSize = SlideBar.AbsoluteSize.X
-                local relPos = math.clamp((mousePos - barPos) / barSize, 0, 1)
-                
-                Fill.Size = UDim2.new(relPos, 0, 1, 0)
-                local value = math.floor(min + (max - min) * relPos)
-                Label.Text = name .. ": " .. value
-                callback(value)
-            end
-        end)
     end
+end)
 
-    -- TẠO CÁC SLIDER
-    CreateSlider("TỐC ĐỘ XOAY", Settings.RotationSpeed, 0, 20, function(val) Settings.RotationSpeed = val end)
-    CreateSlider("KHOẢNG CÁCH VÒNG", Settings.RingSpacing, 5, 50, function(val) Settings.RingSpacing = val end)
-    
-    -- -- DRAGGABLE LOGIC (KÉO THẢ MENU) -- --
-    local dragging, dragInput, dragStart, startPos
-    MainFrame.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 then
-            dragging = true
-            dragStart = input.Position
-            startPos = MainFrame.Position
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then dragging = false end
-            end)
-        end
+local Stroke = Instance.new("UIStroke")
+Stroke.Thickness = 3
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Transparency = 0.4
+Stroke.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 50)
+Title.BackgroundTransparency = 1
+Title.Text = "SUPER RING PARTS V4"
+Title.TextColor3 = Color3.fromRGB(255, 255, 255)
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 24
+Title.Parent = MainFrame
+
+local Watermark = Instance.new("TextLabel")
+Watermark.Size = UDim2.new(1, 0, 0, 25)
+Watermark.Position = UDim2.new(0, 0, 1, -25)
+Watermark.BackgroundTransparency = 1
+Watermark.Text = "Improved RGB Edition - Enjoy!"
+Watermark.TextColor3 = Color3.fromRGB(200, 200, 255)
+Watermark.Font = Enum.Font.Gotham
+Watermark.TextSize = 14
+Watermark.Parent = MainFrame
+
+-- Biến trạng thái
+local ringPartsEnabled = false
+local radius = 200
+local rotationSpeed = 3
+local height = 150
+local attractionStrength = 1000
+
+-- Hàm tạo nút đẹp
+local function createButton(name, pos, text)
+    local btn = Instance.new("TextButton")
+    btn.Name = name
+    btn.Size = UDim2.new(0.8, 0, 0, 40)
+    btn.Position = pos
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 50)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBold
+    btn.TextSize = 18
+    btn.Parent = MainFrame
+
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 12)
+
+    local stroke = Instance.new("UIStroke", btn)
+    stroke.Thickness = 2
+    stroke.Color = Color3.fromRGB(100, 255, 255)
+
+    btn.MouseEnter:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(60, 60, 100)}):Play()
     end)
-    MainFrame.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if input == dragInput and dragging then
-            local delta = input.Position - dragStart
-            MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-        end
+    btn.MouseLeave:Connect(function()
+        TweenService:Create(btn, TweenInfo.new(0.2), {BackgroundColor3 = Color3.fromRGB(30, 30, 50)}):Play()
     end)
 
-    -- -- MINIMIZE LOGIC (THU NHỎ) -- --
-    local isMinimized = false
-    MinBtn.MouseButton1Click:Connect(function()
-        isMinimized = not isMinimized
-        if isMinimized then
-            -- Thu nhỏ lại
-            TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 300, 0, 45)}):Play()
-            Container.Visible = false
-            MinBtn.Text = "[+]"
-            Header.Text = "HỆ THỐNG [ĐANG ẨN]"
-        else
-            -- Mở ra
-            TweenService:Create(MainFrame, TweenInfo.new(0.3), {Size = UDim2.new(0, 300, 0, 400)}):Play()
-            Container.Visible = true
-            MinBtn.Text = "[-]"
-            Header.Text = "HỆ THỐNG HỒN HOÀN"
-        end
-    end)
-
-    return StatusText
+    return btn
 end
 
-local StatusLabel = CreateSystemUI()
+local function createAdjustButton(text, pos, callback)
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.new(0, 50, 0, 40)
+    btn.Position = pos
+    btn.Text = text
+    btn.BackgroundColor3 = Color3.fromRGB(50, 50, 80)
+    btn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    btn.Font = Enum.Font.GothamBlack
+    btn.TextSize = 24
+    btn.Parent = MainFrame
 
--- // NETLESS BYPASS (CHIẾM QUYỀN KHỐI) \\ --
-task.spawn(function()
-    while true do
-        if Settings.Enabled then
-            sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
-        end
-        task.wait(0.1)
+    local corner = Instance.new("UICorner", btn)
+    corner.CornerRadius = UDim.new(0, 12)
+
+    btn.MouseButton1Click:Connect(function()
+        callback()
+        playSound("12221967")
+    end)
+
+    return btn
+end
+
+local function createLabel(text, pos)
+    local lbl = Instance.new("TextLabel")
+    lbl.Size = UDim2.new(0.8, 0, 0, 30)
+    lbl.Position = pos
+    lbl.Text = text
+    lbl.BackgroundTransparency = 1
+    lbl.TextColor3 = Color3.fromRGB(220, 220, 255)
+    lbl.Font = Enum.Font.GothamSemibold
+    lbl.TextSize = 18
+    lbl.Parent = MainFrame
+    return lbl
+end
+
+-- Các control
+local ToggleButton = createButton("Toggle", UDim2.new(0.1, 0, 0.15, 0), "Ring Parts: OFF")
+
+local RadiusLabel = createLabel("Radius: " .. radius, UDim2.new(0.1, 0, 0.32, 0))
+createAdjustButton("-", UDim2.new(0.1, 0, 0.4, 0), function() radius = math.max(100, radius - 100); RadiusLabel.Text = "Radius: " .. radius end)
+createAdjustButton("+", UDim2.new(0.73, 0, 0.4, 0), function() radius = math.min(2000, radius + 100); RadiusLabel.Text = "Radius: " .. radius end)
+
+local SpeedLabel = createLabel("Tốc độ xoay: " .. rotationSpeed, UDim2.new(0.1, 0, 0.55, 0))
+createAdjustButton("-", UDim2.new(0.1, 0, 0.63, 0), function() rotationSpeed = math.max(0.5, rotationSpeed - 0.5); SpeedLabel.Text = "Tốc độ xoay: " .. rotationSpeed end)
+createAdjustButton("+", UDim2.new(0.73, 0, 0.63, 0), function() rotationSpeed = math.min(10, rotationSpeed + 0.5); SpeedLabel.Text = "Tốc độ xoay: " .. rotationSpeed end)
+
+local HeightLabel = createLabel("Độ cao vòng: " .. height, UDim2.new(0.1, 0, 0.78, 0))
+createAdjustButton("-", UDim2.new(0.1, 0, 0.86, 0), function() height = math.max(50, height - 50); HeightLabel.Text = "Độ cao vòng: " .. height end)
+createAdjustButton("+", UDim2.new(0.73, 0, 0.86, 0), function() height = math.min(500, height + 50); HeightLabel.Text = "Độ cao vòng: " .. height end)
+
+-- Toggle logic
+ToggleButton.MouseButton1Click:Connect(function()
+    ringPartsEnabled = not ringPartsEnabled
+    ToggleButton.Text = ringPartsEnabled and "Ring Parts: ON" or "Ring Parts: OFF"
+    ToggleButton.BackgroundColor3 = ringPartsEnabled and Color3.fromRGB(0, 200, 100) or Color3.fromRGB(200, 50, 50)
+    playSound("12221967")
+end)
+
+-- Draggable
+local dragging, dragInput, dragStart, startPos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        dragStart = input.Position
+        startPos = MainFrame.Position
     end
 end)
 
--- // MAIN PHYSICS LOOP (VÒNG LẶP VẬT LÝ) \\ --
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then
+        dragInput = input
+    end
+end)
+
+UserInputService.InputChanged:Connect(function(input)
+    if dragging and input == dragInput then
+        local delta = input.Position - dragStart
+        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
+end)
+
+-- Network Retain (giữ phần client control)
+if not getgenv().Network then
+    getgenv().Network = { BaseParts = {}, Velocity = Vector3.new(50, 50, 50) }
+    Network.RetainPart = function(part)
+        if part:IsA("BasePart") then
+            table.insert(Network.BaseParts, part)
+            part.CustomPhysicalProperties = PhysicalProperties.new(0,0,0,0,0)
+        end
+    end
+    RunService.Heartbeat:Connect(function()
+        sethiddenproperty(LocalPlayer, "SimulationRadius", math.huge)
+        for _, p in pairs(Network.BaseParts) do
+            if p and p.Parent then p.Velocity = Network.Velocity end
+        end
+    end)
+end
+
+-- Ring logic
+local parts = {}
+workspace.DescendantAdded:Connect(function(obj)
+    if obj:IsA("BasePart") and not obj.Anchored and obj.Parent ~= LocalPlayer.Character then
+        table.insert(parts, obj)
+        Network.RetainPart(obj)
+    end
+end)
+
 RunService.Heartbeat:Connect(function()
-    if not Settings.Enabled then 
-        StatusLabel.Text = "TRẠNG THÁI: TẮT\nSỐ KHỐI: 0"
-        return 
-    end
+    if not ringPartsEnabled then return end
+    local hrp = LocalPlayer.Character and LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-    local Character = LocalPlayer.Character
-    local RootPart = Character and Character:FindFirstChild("HumanoidRootPart")
-    if not RootPart then return end
+    local center = hrp.Position
+    for _, part in pairs(parts) do
+        if part and part.Parent and not part.Anchored then
+            local pos = part.Position
+            local flatDist = (Vector3.new(pos.X, center.Y, pos.Z) - center).Magnitude
+            local angle = math.atan2(pos.Z - center.Z, pos.X - center.X)
+            local newAngle = angle + math.rad(rotationSpeed)
 
-    local CenterPos = RootPart.Position
-    local AllParts = {}
+            local targetX = center.X + math.cos(newAngle) * math.min(radius, flatDist)
+            local targetZ = center.Z + math.sin(newAngle) * math.min(radius, flatDist)
+            local targetY = center.Y + height * math.sin((pos.Y - center.Y) / height * math.pi)
 
-    -- AUTO SCAN: Lấy tất cả khối không bị neo
-    for _, part in ipairs(Workspace:GetDescendants()) do
-        if part:IsA("BasePart") and not part.Anchored and not part:IsDescendantOf(Character) then
-            -- Kiểm tra khối hợp lệ (không quá to, không phải Terrain)
-            if part.Size.Magnitude < 100 then
-                table.insert(AllParts, part)
-            end
+            local target = Vector3.new(targetX, targetY, targetZ)
+            local dir = (target - pos).Unit
+            part.Velocity = dir * attractionStrength
         end
-    end
-
-    StatusLabel.Text = "TRẠNG THÁI: HOẠT ĐỘNG\nSỐ KHỐI ĐIỀU KHIỂN: " .. #AllParts
-
-    local Time = tick()
-    
-    -- SOUL LAND ALGORITHM (THUẬT TOÁN HỒN HOÀN)
-    for i, part in ipairs(AllParts) do
-        -- Chia đều vào 9 vòng
-        local RingIndex = (i % Settings.TotalRings)
-        
-        -- Tính bán kính (Vòng 0 ở trong cùng, Vòng 8 ở ngoài cùng)
-        local CurrentRadius = Settings.Radius + (RingIndex * Settings.RingSpacing)
-        
-        -- Hướng xoay: Chẵn phải, Lẻ trái
-        local Direction = (RingIndex % 2 == 0) and 1 or -1
-        
-        -- Góc xoay: Kết hợp thời gian và chỉ số part để rải đều
-        local Angle = (Time * Settings.RotationSpeed * Direction) + (i * (math.pi * 2 / (#AllParts / Settings.TotalRings)))
-        
-        local TargetX = CenterPos.X + math.cos(Angle) * CurrentRadius
-        local TargetZ = CenterPos.Z + math.sin(Angle) * CurrentRadius
-        
-        -- Tạo hiệu ứng sóng (Wave) lên xuống
-        local TargetY = CenterPos.Y + math.sin(Time * 3 + RingIndex) * 2
-        
-        local TargetPos = Vector3.new(TargetX, TargetY, TargetZ)
-        
-        -- Dùng pcall để bỏ qua khối lỗi
-        pcall(function()
-            part.CanCollide = false
-            part.Velocity = (TargetPos - part.Position) * Settings.Attraction
-            -- Hiệu ứng xoay khối tại chỗ
-            part.RotVelocity = Vector3.new(0, 5, 0)
-            part.Transparency = 0 -- Đảm bảo khối nhìn thấy được
-        end)
     end
 end)
 
--- NOTIFICATION
-game:GetService("StarterGui"):SetCore("SendNotification", {
-    Title = "Hệ Thống Đã Tải",
-    Text = "Kích hoạt Menu bên phải màn hình!",
-    Icon = "",
-    Duration = 5
+-- Notification
+StarterGui:SetCore("SendNotification", {
+    Title = "Super Ring Parts V4 RGB",
+    Text = "Đã tải thành công! UI đẹp lung linh kiểu RGB nha <3",
+    Duration = 6
 })
-
